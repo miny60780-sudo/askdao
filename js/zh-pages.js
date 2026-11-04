@@ -20,16 +20,16 @@ const grid=$('#gua64'),pop=$('#guapop');let HEXD=[],FULL=[],curCell=null;let PEN
 const TRI={'111':['乾','天'],'000':['坤','地'],'100':['震','雷'],'011':['巽','风'],'010':['坎','水'],'101':['离','火'],'001':['艮','山'],'110':['兑','泽']};
 fetch('data/hexagrams.json').then(r=>r.json()).then(d=>{HEXD=d;grid.innerHTML=d.map(h=>{const nm=(window.HEX_ZH&&HEX_ZH[h.n])?HEX_ZH[h.n][0]:h.zh;
  const bars=h.lines.split('').reverse().map(v=>'<i class="'+(v==='1'?'y':'n')+'"></i>').join('');
- return '<button type="button" class="gua" data-n="'+h.n+'" aria-label="第'+h.n+'卦 '+nm+'"><span class="gbars">'+bars+'</span><span class="gn">'+h.n+'</span><span class="gz">'+h.zh+'</span><span class="gf">'+nm+'</span></button>';}).join('');
+ return '<button type="button" class="gua" data-n="'+h.n+'" aria-label="第'+h.n+'卦 '+nm+'"><span class="gbars">'+bars+'</span><span class="gn">'+h.n+'</span><span class="gz">'+((window.HEX_ZH_S&&HEX_ZH_S[h.n])||h.zh)+'</span><span class="gf">'+nm+'</span></button>';}).join('');
  grid.querySelectorAll('.gua').forEach(b=>{b.onclick=()=>openGua(+b.dataset.n,b);
   b.onmouseenter=()=>{if(matchMedia('(hover:hover) and (min-width:761px)').matches)openGua(+b.dataset.n,b);};});if(PEND)openGua(PEND);});
 function openGua(n,cell){const h=HEXD[n-1];if(!h){PEND=n;return;}PEND=0;LASTN=n;cell=cell||grid.querySelector('[data-n="'+n+'"]');
  const z=window.HEX_ZH&&HEX_ZH[n];
  pop.querySelector('.gp-sym').textContent=String.fromCodePoint(0x4dc0+n-1);
- pop.querySelector('.gp-no').textContent='第 '+n+' 卦';pop.querySelector('#gp-name').textContent=(z?z[0]:h.zh)+'（'+h.zh+'卦）';
+ pop.querySelector('.gp-no').textContent='第 '+n+' 卦';pop.querySelector('#gp-name').textContent=(z?z[0]:h.zh)+'（'+((window.HEX_ZH_S&&HEX_ZH_S[n])||h.zh)+'卦）';
  const f=FULL[n-1]||{};const lo=TRI[h.lines.slice(0,3)],up=TRI[h.lines.slice(3)];
  const sec=(t,b)=>b?'<div class="gp-s"><em>'+t+'</em><p>'+b+'</p></div>':'';
- pop.querySelector('.gp-ot').innerHTML=(f.gua?sec('卦辞',f.gua):sec('卦辞',h.zh+'：'+(h.judgment_zh||'')))+sec('彖传',f.tuan)+sec('大象',f.daxiang||h.image_zh)+
+ pop.querySelector('.gp-ot').innerHTML=(f.gua?sec('卦辞',f.gua):sec('卦辞',((window.HEX_ZH_S&&HEX_ZH_S[n])||h.zh)+'：'+(h.judgment_zh||'')))+sec('彖传',f.tuan)+sec('大象',f.daxiang||h.image_zh)+
   (f.yao&&f.yao.length?'<div class="gp-s"><em>爻辞（自下而上）</em><ol class="gp-yao">'+f.yao.map(y=>'<li>'+y+'</li>').join('')+'</ol></div>':'<p class="gp-miss">本卦爻辞资料暂缺。</p>');
  const N=window.HEX_NOTES&&HEX_NOTES[n];const T=pop.querySelector('.gp-top');T.hidden=!N;T.textContent=N?N.core:'';
  pop.querySelector('.gp-pt').innerHTML=N?(sec('这一卦讲什么',N.what)+sec('放在生活中',N.life)+

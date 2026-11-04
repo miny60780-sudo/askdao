@@ -312,3 +312,5 @@ body.zh3 .side-wrap .step[data-step="3"] .source{margin-top:10px}
 body.zh3 .side-wrap .step[data-step="3"] #aiout{margin-top:10px}
 body.zh3 .side-wrap .step[data-step="3"] .rcard .rsym{font-size:2.6rem}
 body.zh3 .side-wrap .step[data-step="3"] .rcard h4{font-size:1.2rem}
+
+@media(max-width:480px){.m-close{left:auto;right:8px;top:10px;width:44px;height:44px;z-index:3;font-size:2rem}.mbox{padding-top:48px}.side-head{padding-left:12px}}

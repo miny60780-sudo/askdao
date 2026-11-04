@@ -148,3 +148,6 @@ body.zhp header.top .logo{font-size:1.45rem}
 .cc span{grid-row:1/3;font-size:1.8rem;color:var(--cinnabar);align-self:center}.cc b{font-size:1.15rem}.cc small{color:var(--stone)}
 .cc:hover{box-shadow:0 0 0 2px #a8432f33;transform:translateY(-2px)}
 @media(max-width:760px){.cards3{grid-template-columns:1fr}}
+
+@media(max-width:480px){body.zhp .side-wrap .side-head{padding-left:14px}}
+@media(min-width:1200px){.cdots{left:auto;right:24px;bottom:auto;top:50%;transform:translateY(-50%);flex-direction:column}}
