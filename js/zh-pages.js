@@ -5,8 +5,8 @@ const pages=$$('.page'),bg=$('.drawer-bg'),ai=$('#aipanel'),tip=$('#merit');
 document.body.classList.add('js');
 function show(){const h=location.hash.slice(1),m=h.match(/^p([1-4])/);const n=m?+m[1]:1;
  pages.forEach(p=>p.hidden=p.id!=='p'+n);$$('.cdots a').forEach(a=>a.classList.toggle('on',+a.dataset.p===n));
- closePop();window.scrollTo(0,0);
- if(/-ai$/.test(h))open('oracle');const g=h.match(/-gua(\d+)$/);if(g)setTimeout(()=>openGua(+g[1]),300);}
+ closePop();closeAll();window.scrollTo(0,0);
+ if(/-ai$/.test(h)||h==='oracle')open('oracle');if(h==='merit'||h==='tip')open('merit');const g=h.match(/-gua(\d+)$/);if(g)openGua(+g[1]);}
 let cur=null,last=null;
 function open(k,src){closeAll();last=src||null;cur=k==='oracle'?ai:tip;cur.hidden=false;requestAnimationFrame(()=>cur.classList.add('open'));
  if(k==='oracle'||matchMedia('(max-width:760px)').matches){bg.hidden=false;}
@@ -16,14 +16,14 @@ $$('[data-open]').forEach(b=>b.addEventListener('click',e=>{e.preventDefault();c
 $$('[data-close]').forEach(b=>b.onclick=closeAll);bg.onclick=closeAll;
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){closePop();closeAll();}});
 // 64 gua
-const grid=$('#gua64'),pop=$('#guapop');let HEXD=[],FULL=[],curCell=null;fetch('data/zhouyi-full.json').then(r=>r.json()).then(d=>FULL=d).catch(()=>{});
+const grid=$('#gua64'),pop=$('#guapop');let HEXD=[],FULL=[],curCell=null;let PEND=0,LASTN=0;fetch('data/zhouyi-full.json').then(r=>r.json()).then(d=>{FULL=d;if(LASTN&&!pop.hidden)openGua(LASTN);}).catch(()=>{});
 const TRI={'111':['乾','天'],'000':['坤','地'],'100':['震','雷'],'011':['巽','风'],'010':['坎','水'],'101':['离','火'],'001':['艮','山'],'110':['兑','泽']};
 fetch('data/hexagrams.json').then(r=>r.json()).then(d=>{HEXD=d;grid.innerHTML=d.map(h=>{const nm=(window.HEX_ZH&&HEX_ZH[h.n])?HEX_ZH[h.n][0]:h.zh;
  const bars=h.lines.split('').reverse().map(v=>'<i class="'+(v==='1'?'y':'n')+'"></i>').join('');
  return '<button type="button" class="gua" data-n="'+h.n+'" aria-label="第'+h.n+'卦 '+nm+'"><span class="gbars">'+bars+'</span><span class="gn">'+h.n+'</span><span class="gz">'+h.zh+'</span><span class="gf">'+nm+'</span></button>';}).join('');
  grid.querySelectorAll('.gua').forEach(b=>{b.onclick=()=>openGua(+b.dataset.n,b);
-  b.onmouseenter=()=>{if(matchMedia('(hover:hover) and (min-width:761px)').matches)openGua(+b.dataset.n,b);};});});
-function openGua(n,cell){const h=HEXD[n-1];if(!h)return;cell=cell||grid.querySelector('[data-n="'+n+'"]');
+  b.onmouseenter=()=>{if(matchMedia('(hover:hover) and (min-width:761px)').matches)openGua(+b.dataset.n,b);};});if(PEND)openGua(PEND);});
+function openGua(n,cell){const h=HEXD[n-1];if(!h){PEND=n;return;}PEND=0;LASTN=n;cell=cell||grid.querySelector('[data-n="'+n+'"]');
  const z=window.HEX_ZH&&HEX_ZH[n];
  pop.querySelector('.gp-sym').textContent=String.fromCodePoint(0x4dc0+n-1);
  pop.querySelector('.gp-no').textContent='第 '+n+' 卦';pop.querySelector('#gp-name').textContent=(z?z[0]:h.zh)+'（'+h.zh+'卦）';

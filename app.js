@@ -19,7 +19,7 @@ const S=ZH?{req:'请求解卦',sug:'推荐名字',wait:'正在解读…',off:'�
  calc:'{a} ÷ 8 余 {ra} → 上卦{u}；{b} ÷ 8 余 {rb} → 下卦{l}；{c} ÷ 6 余 {rc} → 动爻为第 {m} 爻。'}
 :{req:'Request a reading',sug:'Suggest names',wait:'Consulting…',off:'The reading service is unavailable right now (you may be offline or previewing locally). The judgment above is yours to reflect on: the ancients read hexagrams as mirrors, not verdicts.',
  nameOff:'AI name suggestions are offline right now. Tip: classic Chinese names often pair a virtue (德 virtue, 安 peace, 明 bright) with a nature image (林 forest, 雪 snow, 川 river).',
- line:['Line 1 (bottom)','Line 2','Line 3','Line 4','Line 5','Line 6 (top)'],next:'Throw {i} of 6 — records {p}',done:'All six lines are cast.',
+ line:['Line 1 (bottom)','Line 2','Line 3','Line 4','Line 5','Line 6 (top)'],next:'Cast line {i} of 6 (record: {p})',done:'All six lines are cast.',
  primary:'Primary hexagram',changed:'Changing to',none:'No moving lines: read the primary hexagram only.',moving:'Moving lines: ',img:'Image: ',judg:'',
  v:{6:'old yin 6 ⚋→⚊',7:'young yang 7 ⚊',8:'young yin 8 ⚋',9:'old yang 9 ⚊→⚋'},bad:'Please enter three whole numbers above zero.',time:'Numbers from the current Chinese-calendar time: ',
  calc:'{a} ÷ 8 leaves {ra} → upper trigram {u}; {b} ÷ 8 leaves {rb} → lower trigram {l}; {c} ÷ 6 leaves {rc} → moving line {m}.'};
@@ -33,7 +33,7 @@ const zhName=h=>ZH&&window.HEX_ZH_S?HEX_ZH_S[h.n]:h.zh;
 const label=h=>ZH?(h.n+'. '+zhName(h)+' · '+HEX_ZH[h.n][0]):(h.n+'. '+h.zh+' '+h.pinyin+' — '+h.name);
 function setMode(m){mode=m;document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.t===m));
  $('ptitle').textContent=T[m][0];$('pdesc').textContent=T[m][1];$('q').placeholder=T[m][2];$('aiout').textContent='';
- $('go').hidden=!RES;$('go').textContent=S.req;}
+ clearTimeout(window.__navT);if(window.__aiCtl)window.__aiCtl.abort();$('go').hidden=!RES;$('go').textContent=m==='name'?S.sug:S.req;}
 function goto(n){document.querySelectorAll('.step').forEach(s=>s.hidden=+s.dataset.step!==n);document.querySelectorAll('.stepper li').forEach(li=>{li.classList.toggle('on',+li.dataset.s===n);li.classList.toggle('done',+li.dataset.s<n);});
  const o=document.getElementById('oracle');if(o&&o.getBoundingClientRect().top<0)o.scrollIntoView({behavior:'smooth'});}
 $('tostep2').onclick=()=>{if(mode==='name'){RES=null;$('hexout').innerHTML='';$('go').hidden=false;$('go').textContent=S.sug;$('aiout').textContent='';goto(3);}else goto(2);};
@@ -47,11 +47,11 @@ function render(){const box=$('lines');box.innerHTML='';
  $('caststatus').textContent=LINES.length<6?fill(S.next,{i:LINES.length+1,p:S.line[LINES.length]}):S.done;
  document.querySelectorAll('.coinbtn').forEach(b=>b.disabled=LINES.length>=6);}
 function clearHl(){document.querySelectorAll('#hexgrid .hx').forEach(c=>c.classList.remove('hl','hl2'));}
-function reset(){LINES=[];RES=null;$('hexout').innerHTML='';$('aiout').textContent='';$('go').hidden=true;clearHl();render();goto(mode==='name'?1:2);}
+function reset(){clearTimeout(window.__navT);if(window.__aiCtl)window.__aiCtl.abort();LINES=[];RES=null;$('hexout').innerHTML='';$('aiout').textContent='';$('go').hidden=true;clearHl();render();goto(mode==='name'?1:2);}
 document.querySelectorAll('.coinbtn').forEach(b=>b.onclick=()=>{if(LINES.length>=6)return;LINES.push(+b.dataset.v);render();if(LINES.length===6)finish();});
 $('undo').onclick=()=>{if(RES){RES=null;$('hexout').innerHTML='';$('go').hidden=true;clearHl();}LINES.pop();render();};
 document.querySelectorAll('.reset').forEach(b=>b.onclick=reset);
-function numberCast(a,b,c,note){if(![a,b,c].every(x=>Number.isInteger(x)&&x>0)){$('hexout').textContent=S.bad;return;}
+function numberCast(a,b,c,note){if(![a,b,c].every(x=>Number.isInteger(x)&&x>0)){RES=null;$('go').hidden=true;$('aiout').textContent='';$('hexout').textContent=S.bad;return;}
  const ra=a%8,rb=b%8,rc=c%6,u=ra||8,l=rb||8,m=rc||6;
  const bits=TRI[l][3]+TRI[u][3];LINES=[...bits].map((x,i)=>x==='1'?(i+1===m?9:7):(i+1===m?6:8));render();
  const tn=k=>TRI[k][0]+(ZH?'（'+['','天','泽','火','雷','风','水','山','地'][k]+'）':' ('+TRI[k][2]+')');
@@ -72,10 +72,10 @@ function finish(note){if(!HEX.length){setTimeout(()=>finish(note),200);return;}
  const card=(x,t)=>'<div class="rcard"><p class="meta">'+t+'</p><div class="rsym">'+sym(x)+'</div><h4>'+label(x)+'</h4><p class="jd"><em>'+lb[0]+'</em> '+jd(x)+'</p>'+(im(x)?'<p class="jd"><em>'+lb[1]+'</em> '+im(x)+'</p>':'')+(pl(x)?'<p class="plain"><em>'+lb[2]+'</em> '+pl(x)+'</p>':'')+'</div>';
  let html=(note?'<p class="calc">'+note+'</p>':'')+'<div class="res">'+card(h,S.primary)+(h2?'<div class="rarrow" aria-hidden="true">→</div>'+card(h2,S.changed):'')+'</div><p class="mv">'+(mv.length?S.moving+mv.map(i=>S.line[i-1]).join(ZH?'、':', '):S.none)+'</p>';
  $('hexout').innerHTML=html;clearHl();const cells=document.querySelectorAll('#hexgrid .hx');if(cells.length){cells[h.n-1].classList.add('hl');if(h2)cells[h2.n-1].classList.add('hl2');}
- $('go').hidden=false;$('go').textContent=S.req;setTimeout(()=>goto(3),700);}
+ $('go').hidden=false;$('go').textContent=S.req;clearTimeout(window.__navT);window.__navT=setTimeout(()=>goto(3),700);}
 $('go').onclick=async()=>{const q=$('q').value.trim();const ctx={mode,question:q};
  if(mode!=='name'){if(!RES)return;const {h,h2,mv}=RES;ctx.lines=LINES.slice();ctx.changingLines=mv.join(',');ctx.hexagram=h.n+' '+h.name;ctx.changing=h2?h2.n+' '+h2.name:null;}
- $('aiout').textContent=S.wait;$('go').disabled=true;
- try{const r=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(ctx)});if(!r.ok)throw 0;const j=await r.json();if(!j.text)throw 0;$('aiout').textContent=j.text;}
- catch(e){$('aiout').textContent=mode==='name'?S.nameOff:S.off;}finally{$('go').disabled=false;}};
+ $('aiout').textContent=S.wait;$('go').disabled=true;if(window.__aiCtl)window.__aiCtl.abort();const ctl=new AbortController();window.__aiCtl=ctl;const to=setTimeout(()=>ctl.abort(),25000);
+ try{const r=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(ctx),signal:ctl.signal});if(!r.ok)throw 0;const j=await r.json();if(!j.text)throw 0;if(window.__aiCtl===ctl)$('aiout').textContent=j.text;}
+ catch(e){if(window.__aiCtl===ctl)$('aiout').textContent=mode==='name'?S.nameOff:S.off;}finally{clearTimeout(to);if(window.__aiCtl===ctl){$('go').disabled=false;window.__aiCtl=null;}}};
 setMode('iching');render();

@@ -112,11 +112,13 @@
     showLineSum();
     $('go').hidden = false;
     $('go').textContent = S.req;
-    setTimeout(() => goto(3), 480);
+    clearTimeout(window.__navT);
+    window.__navT = setTimeout(() => goto(3), 480);
   };
 
   const origReset = window.reset;
   function zhReset() {
+    clearTimeout(window.__navT);
     clearLineSum();
     origReset();
   }
