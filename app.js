@@ -1,5 +1,7 @@
-/* AskDao oracle — manual casting (coins / numbers / objects). Request format matches api/proxy.js */
-const API='/api/reading'; // configurable: point to your proxy, e.g. https://api.example.com/api/reading
+/* AskDao oracle — manual casting (coins / numbers / objects).
+   POST {mode,question,lang,lines,changingLines,hexagram,changing,...} → {text}.
+   GitHub Pages cannot host the proxy, so readings go to the fzjzq.com backend. */
+const API='https://www.fzjzq.com/askdao-api/reading';
 const ZH=document.documentElement.lang.startsWith('zh');
 const T=ZH?{iching:['易经起卦','心中默念所问之事，然后亲手起卦。','你的问题（可不填）'],
 char:['测字','写下一个汉字，亲手起一卦，再请求解读其字形字义与卦象。','例如：福'],
@@ -73,8 +75,8 @@ function finish(note){if(!HEX.length){setTimeout(()=>finish(note),200);return;}
  let html=(note?'<p class="calc">'+note+'</p>':'')+'<div class="res">'+card(h,S.primary)+(h2?'<div class="rarrow" aria-hidden="true">→</div>'+card(h2,S.changed):'')+'</div><p class="mv">'+(mv.length?S.moving+mv.map(i=>S.line[i-1]).join(ZH?'、':', '):S.none)+'</p>';
  $('hexout').innerHTML=html;clearHl();const cells=document.querySelectorAll('#hexgrid .hx');if(cells.length){cells[h.n-1].classList.add('hl');if(h2)cells[h2.n-1].classList.add('hl2');}
  $('go').hidden=false;$('go').textContent=S.req;clearTimeout(window.__navT);window.__navT=setTimeout(()=>goto(3),700);}
-$('go').onclick=async()=>{const q=$('q').value.trim();const ctx={mode,question:q};
- if(mode!=='name'){if(!RES)return;const {h,h2,mv}=RES;ctx.lines=LINES.slice();ctx.changingLines=mv.join(',');ctx.hexagram=h.n+' '+h.name;ctx.changing=h2?h2.n+' '+h2.name:null;}
+$('go').onclick=async()=>{const q=$('q').value.trim();const ctx={mode,question:q,lang:ZH?'zh':'en'};
+ if(mode!=='name'){if(!RES)return;const {h,h2,mv}=RES;ctx.lines=LINES.slice();ctx.changingLines=mv.join(',');ctx.hexagram=h.n+' '+h.name;ctx.hexagramZh=h.zh;ctx.pinyin=h.pinyin;ctx.changing=h2?h2.n+' '+h2.name:null;ctx.changingZh=h2?h2.zh:null;ctx.changingPinyin=h2?h2.pinyin:null;}
  $('aiout').textContent=S.wait;$('go').disabled=true;if(window.__aiCtl)window.__aiCtl.abort();const ctl=new AbortController();window.__aiCtl=ctl;const to=setTimeout(()=>ctl.abort(),25000);
  try{const r=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(ctx),signal:ctl.signal});if(!r.ok)throw 0;const j=await r.json();if(!j.text)throw 0;if(window.__aiCtl===ctl)$('aiout').textContent=j.text;}
  catch(e){if(window.__aiCtl===ctl)$('aiout').textContent=mode==='name'?S.nameOff:S.off;}finally{clearTimeout(to);if(window.__aiCtl===ctl){$('go').disabled=false;window.__aiCtl=null;}}};
