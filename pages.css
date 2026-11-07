@@ -84,7 +84,7 @@ body.zhp .drawer-bg[hidden],[hidden]{display:none!important}
 .gz{font-size:1.45rem}.gf{font-size:.8rem;white-space:nowrap}
 @media(max-width:760px){.gbars{width:26px}.gz{font-size:1.2rem}.gf{font-size:.66rem}}
 @media(max-width:1199px){body.zh3.zhp{overflow-x:visible}html:has(body.zhp){overflow-x:clip}}
-@media(max-width:760px){.tbl.wide{min-width:640px}.tblw::after{content:"← 左右滑动查看 →";display:block;text-align:center;font-size:.8rem;color:var(--stone)}}
+
 /* 第一页 直观对照 */
 .vh{font-size:1.3rem;margin:1.6em 0 .6em;color:var(--ink)}
 .flow{display:flex;align-items:stretch;gap:10px;flex-wrap:wrap}
@@ -151,3 +151,5 @@ body.zhp header.top .logo{font-size:1.45rem}
 
 @media(max-width:480px){body.zhp .side-wrap .side-head{padding-left:14px}}
 @media(min-width:1200px){.cdots{left:auto;right:24px;bottom:auto;top:50%;transform:translateY(-50%);flex-direction:column}}
+
+@media(max-width:760px){.tbl.wide,.tbl.wide tbody,.tbl.wide tr,.tbl.wide th,.tbl.wide td{display:block;width:100%}.tbl.wide thead{display:none}.tbl.wide tr{margin:0 0 12px;border:1px solid var(--line)}.tbl.wide tbody th{text-align:left;background:#e9dfc8}.tbl.wide td{text-align:left!important;border:0;border-top:1px solid var(--line)}.tbl.wide td::before{content:attr(data-l)"：";font-weight:600;color:var(--cinnabar)}.tbl{font-size:.88rem}.tbl th,.tbl td{padding:6px 4px}}
