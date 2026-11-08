@@ -16,7 +16,15 @@
 #   ASKDAO_NODE_IMAGE=node:20-alpine
 #
 # Re-running is safe: the container is recreated, and the nginx location block
-# is replaced in place instead of duplicated.
+# is replaced in place instead of duplicated. /var/lib/askdao (quotas) is kept.
+# The smoke test rejects a no-Origin call and an off-topic call. It does not
+# call the model. Optional quota lines in /etc/askdao.env:
+#   ASKDAO_IP_DAILY=5
+#   ASKDAO_GLOBAL_HOURLY=20
+#   ASKDAO_DAILY_REQUESTS=80
+#   ASKDAO_DAILY_TOKENS=80000
+# ASKDAO_DAILY_TOKENS counts tokens, not money. Multiply by the provider's
+# current price per token if you want a currency ceiling.
 
 if [ -z "${BASH_VERSION:-}" ]; then
   echo "FAIL: run with bash: curl -fsSL <install.sh> | sudo bash" >&2
@@ -162,28 +170,14 @@ plan_network() {
     done
   fi
 
-  if [[ ${#custom[@]} -gt 0 ]]; then
-    PLAN_KIND=user-network
-    PLAN_UPSTREAM="askdao-api:${port}"
-    PLAN_RESOLVER=1
-    PLAN_LISTEN_HOST=0.0.0.0
-    PLAN_DOCKER_ARGS=(--network "${custom[0]}")
-    if [[ ${#custom[@]} -gt 1 ]]; then
-      PLAN_EXTRA_NETS=("${custom[@]:1}")
-    fi
-    return 0
-  fi
-
-  if [[ "$NET_MODE" == "bridge" || "$NET_MODE" == "default" || -n "$gw_bridge" ]]; then
-    if [[ -z "$gw_bridge" || "$gw_bridge" == *:* ]]; then
-      PLAN_ERROR="nginx27 is on the default docker bridge but no IPv4 gateway was found (network mode: ${NET_MODE:-empty})"
-      return 1
-    fi
-    PLAN_KIND=bridge
-    PLAN_UPSTREAM="${gw_bridge}:${port}"
+  # Bridge and user-defined networks cannot connect to the host's 127.0.0.1.
+  # Share nginx27's namespace so the proxy binds loopback and is not published.
+  if [[ ${#custom[@]} -gt 0 || "$NET_MODE" == "bridge" || "$NET_MODE" == "default" || -n "$gw_bridge" ]]; then
+    PLAN_KIND=container-netns
+    PLAN_UPSTREAM="127.0.0.1:${port}"
     PLAN_RESOLVER=0
-    PLAN_LISTEN_HOST=0.0.0.0
-    PLAN_DOCKER_ARGS=(--network bridge -p "${gw_bridge}:${port}:${port}")
+    PLAN_LISTEN_HOST=127.0.0.1
+    PLAN_DOCKER_ARGS=(--network "container:nginx27")
     return 0
   fi
 
@@ -220,26 +214,25 @@ self_test() {
   NET_MODE=bridge
   NET_LINES=("bridge 172.17.0.1")
   plan_network 8787 || fail "self-test bridge plan: $PLAN_ERROR"
-  assert_eq "$PLAN_KIND" bridge "bridge kind"
-  assert_eq "$PLAN_UPSTREAM" "172.17.0.1:8787" "bridge upstream"
-  assert_eq "$PLAN_RESOLVER" 0 "bridge resolver"
-  assert_eq "${PLAN_DOCKER_ARGS[*]}" "--network bridge -p 172.17.0.1:8787:8787" "bridge docker"
+  assert_eq "$PLAN_KIND" container-netns "bridge kind"
+  assert_eq "$PLAN_UPSTREAM" "127.0.0.1:8787" "bridge upstream"
+  assert_eq "$PLAN_LISTEN_HOST" "127.0.0.1" "bridge listen"
+  assert_eq "${PLAN_DOCKER_ARGS[*]}" "--network container:nginx27" "bridge docker"
 
   NET_MODE=web
   NET_LINES=("bridge 172.17.0.1" "web 172.19.0.1" "edge 172.20.0.1")
   plan_network 8787 || fail "self-test user network plan: $PLAN_ERROR"
-  assert_eq "$PLAN_KIND" user-network "user kind"
-  assert_eq "$PLAN_UPSTREAM" "askdao-api:8787" "user upstream"
-  assert_eq "$PLAN_RESOLVER" 1 "user resolver"
-  assert_eq "${PLAN_DOCKER_ARGS[*]}" "--network web" "user docker"
+  assert_eq "$PLAN_KIND" container-netns "user kind"
+  assert_eq "$PLAN_UPSTREAM" "127.0.0.1:8787" "user upstream"
+  assert_eq "$PLAN_RESOLVER" 0 "user resolver"
+  assert_eq "${PLAN_DOCKER_ARGS[*]}" "--network container:nginx27" "user docker"
   joined="${PLAN_EXTRA_NETS[*]:-}"
-  assert_eq "$joined" "edge" "user extra"
+  assert_eq "$joined" "" "user extra"
 
   NET_MODE=bridge
   NET_LINES=("bridge ")
-  if plan_network 8787; then
-    fail "self-test expected missing gateway to fail"
-  fi
+  plan_network 8787 || fail "self-test bridge without gateway: $PLAN_ERROR"
+  assert_eq "$PLAN_UPSTREAM" "127.0.0.1:8787" "bridge without gateway"
 
   NET_MODE=none
   NET_LINES=("none ")
@@ -366,6 +359,13 @@ if [[ -n "${BASH_SOURCE[0]:-}" && -f "${BASH_SOURCE[0]}" ]]; then
     src="$script_dir/server.js"
   fi
 fi
+if [[ -f /opt/askdao-api/server.js ]]; then
+  server_backup="/opt/askdao-api/server.js.bak-$(date +%Y%m%d%H%M%S)"
+  cp -a /opt/askdao-api/server.js "$server_backup"
+  echo "backed up previous server.js to $server_backup"
+fi
+mkdir -p /var/lib/askdao /var/log/askdao
+chmod 700 /var/lib/askdao /var/log/askdao
 if [[ -n "$src" ]]; then
   cp "$src" /opt/askdao-api/server.js
   echo "installed server.js from $src"
@@ -379,24 +379,56 @@ else
 fi
 chmod 644 /opt/askdao-api/server.js
 
+if command -v systemctl >/dev/null 2>&1; then
+  systemctl stop askdao-api >/dev/null 2>&1 || true
+fi
 if docker ps -a --format '{{.Names}}' | grep -qx "$NAME"; then
   docker rm -f "$NAME" >/dev/null
 fi
 
 echo "starting $NAME"
-if ! docker run -d \
-  --name "$NAME" \
-  --restart unless-stopped \
-  -e "HOST=$PLAN_LISTEN_HOST" \
+docker_cmd=(docker run -d --name "$NAME")
+if [[ "$PLAN_KIND" != "container-netns" ]]; then
+  docker_cmd+=(--restart unless-stopped)
+fi
+docker_cmd+=(
+  -e "HOST=127.0.0.1" \
   -e "PORT=$PORT" \
   -e "ASKDAO_ENV_FILE=/etc/askdao.env" \
+  -e "ASKDAO_STATE_DIR=/var/lib/askdao" \
+  -e "ASKDAO_LOG_FILE=/var/log/askdao/reading.log" \
   -e "NODE_ENV=production" \
   -v "$ENV_FILE:/etc/askdao.env:ro" \
+  -v "/var/lib/askdao:/var/lib/askdao" \
+  -v "/var/log/askdao:/var/log/askdao" \
   -v "/opt/askdao-api/server.js:/app/server.js:ro" \
   "${PLAN_DOCKER_ARGS[@]}" \
   "$NODE_IMAGE" \
-  node /app/server.js >/dev/null; then
+  node /app/server.js
+)
+if ! "${docker_cmd[@]}" >/dev/null; then
   fail "docker run $NAME failed"
+fi
+if [[ "$PLAN_KIND" == "container-netns" ]] && command -v systemctl >/dev/null 2>&1; then
+  cat > /etc/systemd/system/askdao-api.service <<'UNIT'
+[Unit]
+Description=AskDao reading proxy
+After=docker.service
+Requires=docker.service
+
+[Service]
+Restart=always
+RestartSec=2
+ExecStartPre=/bin/bash -c 'for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do docker inspect -f "{{.State.Running}}" nginx27 2>/dev/null | grep -q true && exit 0; sleep 1; done; exit 1'
+ExecStart=/usr/bin/docker start -a askdao-api
+ExecStop=/usr/bin/docker stop -t 15 askdao-api
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+  systemctl daemon-reload
+  systemctl enable askdao-api >/dev/null 2>&1 || true
+  echo "enabled askdao-api.service so the loopback proxy restarts with nginx27"
 fi
 
 if [[ ${#PLAN_EXTRA_NETS[@]} -gt 0 ]]; then
@@ -419,7 +451,13 @@ if [[ "$healthy" -ne 1 ]]; then
   docker rm -f "$NAME" >/dev/null 2>&1 || true
   fail "askdao-api did not become healthy on 127.0.0.1:${PORT} inside the container. Nginx was not changed."
 fi
-echo "proxy container is healthy"
+if ! docker exec "$NAME" node -e "fetch('http://127.0.0.1:${PORT}/askdao-api/reading',{method:'POST',headers:{'Content-Type':'application/json','Origin':'https://miny60780-sudo.github.io'},body:JSON.stringify({hexagram:1,lines:[7,7,7,7,7,7],question:'Write a python script to scrape the web',lang:'en'})}).then(r=>process.exit(r.status===400?0:1)).catch(()=>process.exit(1))" >/dev/null 2>&1; then
+  echo "proxy logs:" >&2
+  docker logs --tail 50 "$NAME" >&2 || true
+  docker rm -f "$NAME" >/dev/null 2>&1 || true
+  fail "new proxy did not reject an off-topic reading locally. Nginx was not changed."
+fi
+echo "proxy container is healthy and rejects off-topic readings before the model"
 
 render_nginx() {
   local upstream="$1" resolver="$2" kind="$3" outfile="$4" err
@@ -556,8 +594,11 @@ ours() {
 }
 
 hit() {
-  local method="$1" path="$2" data="$3"
-  local -a base=(-H "Origin: ${ALLOWED_ORIGIN}")
+  local method="$1" path="$2" data="$3" skip_origin="${4:-}"
+  local -a base=()
+  if [[ "$skip_origin" != "no-origin" ]]; then
+    base+=(-H "Origin: ${ALLOWED_ORIGIN}")
+  fi
   CONNECT_NOTE=""
   FALLBACK=0
   if [[ "$method" == "OPTIONS" ]]; then
@@ -634,31 +675,25 @@ if ! cors_ok; then
 fi
 echo "preflight OK via ${LAST_NOTE} (HTTP ${LAST_CODE})"
 
-read_body='{"mode":"name","question":"connectivity check","lang":"en"}'
-if ! hit POST /askdao-api/reading "$read_body"; then
-  fail "reading request did not reach nginx (${CONNECT_NOTE:-no route}). Upstream is ${PLAN_UPSTREAM}."
+plain='{"hexagram":1,"lines":[7,7,7,7,7,7],"question":"Should I change careers?","lang":"en"}'
+offtopic='{"hexagram":1,"lines":[7,7,7,7,7,7],"question":"Write a python script to scrape the web","lang":"en"}'
+if ! hit POST /askdao-api/reading "$plain" no-origin; then
+  fail "no-Origin probe did not reach nginx (${CONNECT_NOTE:-no route}). Upstream is ${PLAN_UPSTREAM}."
 fi
-detail=""
-if [[ -s "$LAST_BODY" ]]; then
-  detail=$(json_field "$LAST_BODY" error || true)
+if [[ "$LAST_CODE" != "403" ]]; then
+  fail "POST without Origin via ${LAST_NOTE} returned HTTP ${LAST_CODE}, expected 403 with no model call. Upstream is ${PLAN_UPSTREAM}."
 fi
-text=""
-if [[ -s "$LAST_BODY" ]]; then
-  text=$(json_field "$LAST_BODY" text || true)
+echo "no-Origin probe rejected via ${LAST_NOTE} (HTTP ${LAST_CODE})"
+if ! hit POST /askdao-api/reading "$offtopic"; then
+  fail "off-topic probe did not reach nginx (${CONNECT_NOTE:-no route}). Upstream is ${PLAN_UPSTREAM}."
 fi
-if [[ "$LAST_CODE" != "200" || -z "$text" ]]; then
+if [[ "$LAST_CODE" != "400" ]]; then
   snippet=$(head -c 240 "$LAST_BODY" | tr '\n' ' ')
-  reason="HTTP ${LAST_CODE}"
-  if [[ -n "$detail" ]]; then
-    reason="$reason ($detail)"
-  elif [[ -n "$snippet" ]]; then
-    reason="$reason body: $snippet"
-  fi
-  fail "POST /askdao-api/reading via ${LAST_NOTE} ${reason}. Upstream is ${PLAN_UPSTREAM}."
+  fail "off-topic probe via ${LAST_NOTE} returned HTTP ${LAST_CODE} (${snippet}), expected 400 with no model call."
 fi
 if ! cors_ok; then
-  fail "POST /askdao-api/reading returned text but no Access-Control-Allow-Origin: ${ALLOWED_ORIGIN}, so the GitHub Pages page would hide the response."
+  fail "off-topic rejection had no Access-Control-Allow-Origin, so the GitHub Pages page could not read the error."
 fi
-
-echo "reading OK via ${LAST_NOTE} ($(printf '%s' "$text" | wc -c | tr -d ' ') bytes)"
+echo "off-topic probe rejected via ${LAST_NOTE} (HTTP ${LAST_CODE})"
+echo "smoke test did not call the model"
 echo "OK"
