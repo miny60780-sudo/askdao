@@ -41,6 +41,8 @@ nav a:hover{border-color:var(--cinnabar);color:var(--ink)}
 /* buttons: seal-stamp style */
 .btn{display:inline-block;cursor:pointer;font:500 1.1rem/1.2 var(--fh);letter-spacing:1.5px;text-decoration:none;color:#f8f1e3;background:var(--cinnabar);border:0;padding:13px 26px;border-radius:4px;box-shadow:inset 0 0 0 2px #f8f1e3,inset 0 0 0 3px var(--cinnabar),0 2px 0 #00000022;transition:transform .2s,filter .2s}
 .btn:hover{color:#fff;filter:brightness(1.08);transform:translateY(-1px)}
+.btn:disabled{opacity:.45;cursor:not-allowed;filter:none;transform:none}
+.qhint{margin:0 0 .7rem;color:var(--cinnabar);font-size:.95rem}
 .btn.ghost{background:transparent;color:var(--cinnabar);box-shadow:inset 0 0 0 1px var(--cinnabar)}
 /* sections */
 section{padding:52px 5%;position:relative}

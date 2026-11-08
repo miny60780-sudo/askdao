@@ -8,19 +8,21 @@ char:['测字','写下一个汉字，亲手起一卦，再请求解读其字形�
 name:['取中文名','告诉我们你的名字和看重的品质，为你推荐带寓意的中文名（无需起卦）。','例如：Emily，看重善良与勇气'],
 lost:['寻物卦','描述丢失的物品，亲手起一卦，作为“再去哪里找找”的趣味提示。','例如：钥匙，昨天在家里不见了'],
 life:['人生感悟','提出一个关于人生方向的开放问题，起一卦作为思考的起点。','例如：我该换工作吗？']}
-:{iching:['I Ching Casting','Hold a question in mind, then cast the hexagram yourself.','Your question (optional)'],
+:{iching:['I Ching Casting','Hold a question in mind, then cast the hexagram yourself.','Your question'],
 char:['Character Reading 测字','Write one Chinese character (or an English word), cast a hexagram by hand, then request a reading of the character and hexagram.','e.g. 福 or "home"'],
 name:['Chinese Name Ideas','Tell us your name and the qualities you value; we suggest Chinese names with meanings. No casting needed.','e.g. Emily, values kindness and courage'],
 lost:['Lost Item Hexagram 寻物','Describe what you lost and cast a hexagram by hand: a playful folk prompt for where to look again.','e.g. my keys, lost yesterday at home'],
 life:['Life Insight','Ask an open question about your path; cast a hexagram as a starting point for reflection.','e.g. Should I change careers?']};
 const S=ZH?{req:'请求解卦',sug:'推荐名字',wait:'正在解读…',off:'解读服务暂时无法连接（可能处于离线或本地预览）。你仍可阅读上方卦辞，自行体会：古人把卦象当作一面镜子，而非定论。',
- nameOff:'AI 取名暂时无法使用。小提示：传统中文名常把一种品德（如德、安、明）与一个自然意象（如林、雪、川）搭配。',
+ needQ:'请先写下你的问题。',
+ nameOff:'取名暂时无法使用。小提示：传统中文名常把一种品德（如德、安、明）与一个自然意象（如林、雪、川）搭配。',
  line:['第一爻（初爻）','第二爻','第三爻','第四爻','第五爻','第六爻（上爻）'],next:'请掷第 {i} 次，记录{p}',done:'六爻已成。',
  primary:'本卦',changed:'之卦（变卦）',none:'无变爻，只看本卦。',moving:'变爻：',img:'象：',judg:'',
  v:{6:'老阴 6 ⚋→⚊',7:'少阳 7 ⚊',8:'少阴 8 ⚋',9:'老阳 9 ⚊→⚋'},bad:'请输入三个正整数。',time:'已按当前农历时间取数：',
  calc:'{a} ÷ 8 余 {ra} → 上卦{u}；{b} ÷ 8 余 {rb} → 下卦{l}；{c} ÷ 6 余 {rc} → 动爻为第 {m} 爻。'}
-:{req:'Request a reading',sug:'Suggest names',wait:'Consulting…',off:'The reading service is unavailable right now (you may be offline or previewing locally). The judgment above is yours to reflect on: the ancients read hexagrams as mirrors, not verdicts.',
- nameOff:'AI name suggestions are offline right now. Tip: classic Chinese names often pair a virtue (德 virtue, 安 peace, 明 bright) with a nature image (林 forest, 雪 snow, 川 river).',
+:{req:'Read my hexagram',sug:'Suggest names',wait:'Consulting…',off:'The reading service is unavailable right now (you may be offline or previewing locally). The judgment above is yours to reflect on: the ancients read hexagrams as mirrors, not verdicts.',
+ needQ:'Please write your question first.',
+ nameOff:'Name suggestions are offline right now. Tip: classic Chinese names often pair a virtue (德 virtue, 安 peace, 明 bright) with a nature image (林 forest, 雪 snow, 川 river).',
  line:['Line 1 (bottom)','Line 2','Line 3','Line 4','Line 5','Line 6 (top)'],next:'Cast line {i} of 6 (record: {p})',done:'All six lines are cast.',
  primary:'Primary hexagram',changed:'Changing to',none:'No moving lines: read the primary hexagram only.',moving:'Moving lines: ',img:'Image: ',judg:'',
  v:{6:'old yin 6 ⚋→⚊',7:'young yang 7 ⚊',8:'young yin 8 ⚋',9:'old yang 9 ⚊→⚋'},bad:'Please enter three whole numbers above zero.',time:'Numbers from the current Chinese-calendar time: ',
@@ -38,7 +40,10 @@ function setMode(m){mode=m;document.querySelectorAll('.tabs button').forEach(b=>
  clearTimeout(window.__navT);if(window.__aiCtl)window.__aiCtl.abort();$('go').hidden=!RES;$('go').textContent=m==='name'?S.sug:S.req;}
 function goto(n){document.querySelectorAll('.step').forEach(s=>s.hidden=+s.dataset.step!==n);document.querySelectorAll('.stepper li').forEach(li=>{li.classList.toggle('on',+li.dataset.s===n);li.classList.toggle('done',+li.dataset.s<n);});
  const o=document.getElementById('oracle');if(o&&o.getBoundingClientRect().top<0)o.scrollIntoView({behavior:'smooth'});}
-$('tostep2').onclick=()=>{if(mode==='name'){RES=null;$('hexout').innerHTML='';$('go').hidden=false;$('go').textContent=S.sug;$('aiout').textContent='';goto(3);}else goto(2);};
+function questionReady(){return $('q').value.trim().length>0;}
+function syncNext(){const ok=questionReady(),btn=$('tostep2');if(!btn)return;btn.disabled=!ok;let hint=$('qhint');if(!hint){hint=document.createElement('p');hint.id='qhint';hint.className='qhint';btn.parentNode.insertBefore(hint,btn);}hint.textContent=S.needQ;hint.hidden=ok;}
+$('q').addEventListener('input',syncNext);
+$('tostep2').onclick=()=>{if(!questionReady()){syncNext();return;}if(mode==='name'){RES=null;$('hexout').innerHTML='';$('go').hidden=false;$('go').textContent=S.sug;$('aiout').textContent='';goto(3);}else goto(2);};
 document.querySelectorAll('[data-goto]').forEach(b=>b.onclick=()=>goto(+b.dataset.goto));
 document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>setMode(b.dataset.t));
 document.querySelectorAll('.methods button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.methods button').forEach(x=>x.classList.toggle('on',x===b));
@@ -83,4 +88,4 @@ $('go').onclick=async()=>{
  $('aiout').textContent=S.wait;$('go').disabled=true;if(window.__aiCtl)window.__aiCtl.abort();const ctl=new AbortController();window.__aiCtl=ctl;const to=setTimeout(()=>ctl.abort(),25000);
  try{const r=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},referrerPolicy:'strict-origin',body:JSON.stringify(ctx),signal:ctl.signal});if(r.status===429){if(window.__aiCtl===ctl)$('aiout').textContent=ZH?'今天的解卦次数已用完，请明天再试。':'Today’s reading limit has been reached. Please try again tomorrow.';return;}if(!r.ok)throw 0;const j=await r.json();if(!j.text)throw 0;if(window.__aiCtl===ctl)$('aiout').textContent=j.text;}
  catch(e){if(window.__aiCtl===ctl)$('aiout').textContent=mode==='name'?S.nameOff:S.off;}finally{clearTimeout(to);if(window.__aiCtl===ctl){$('go').disabled=false;window.__aiCtl=null;}}};
-setMode('iching');render();
+setMode('iching');render();syncNext();
