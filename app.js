@@ -11,8 +11,8 @@ life:['人生感悟','提出一个关于人生方向的开放问题，起一卦�
 :{iching:['I Ching Casting','Hold a question in mind, then cast the hexagram yourself.','Your question'],
 char:['Character Reading 测字','Write one Chinese character (or an English word), cast a hexagram by hand, then request a reading of the character and hexagram.','e.g. 福 or "home"'],
 name:['Chinese Name Ideas','Tell us your name and the qualities you value; we suggest Chinese names with meanings. No casting needed.','e.g. Emily, values kindness and courage'],
-lost:['Lost Item Hexagram 寻物','Describe what you lost and cast a hexagram by hand: a playful folk prompt for where to look again.','e.g. my keys, lost yesterday at home'],
-life:['Life Insight','Ask an open question about your path; cast a hexagram as a starting point for reflection.','e.g. Should I change careers?']};
+
+life:['Life Insight','Ask an open, reflective question about the situation you are in. Cast a hexagram as a starting point for reflection.','e.g. What am I not seeing in this situation?']};
 const S=ZH?{req:'请求解卦',sug:'推荐名字',wait:'正在解读…',off:'解读服务暂时无法连接（可能处于离线或本地预览）。你仍可阅读上方卦辞，自行体会：古人把卦象当作一面镜子，而非定论。',
  needQ:'请先写下你的问题。',
  nameOff:'取名暂时无法使用。小提示：传统中文名常把一种品德（如德、安、明）与一个自然意象（如林、雪、川）搭配。',
@@ -20,11 +20,11 @@ const S=ZH?{req:'请求解卦',sug:'推荐名字',wait:'正在解读…',off:'�
  primary:'本卦',changed:'之卦（变卦）',none:'无变爻，只看本卦。',moving:'变爻：',img:'象：',judg:'',
  v:{6:'老阴 6 ⚋→⚊',7:'少阳 7 ⚊',8:'少阴 8 ⚋',9:'老阳 9 ⚊→⚋'},bad:'请输入三个正整数。',time:'已按当前农历时间取数：',
  calc:'{a} ÷ 8 余 {ra} → 上卦{u}；{b} ÷ 8 余 {rb} → 下卦{l}；{c} ÷ 6 余 {rc} → 动爻为第 {m} 爻。'}
-:{req:'Read my hexagram',sug:'Suggest names',wait:'Consulting…',off:'The reading service is unavailable right now (you may be offline or previewing locally). The judgment above is yours to reflect on: the ancients read hexagrams as mirrors, not verdicts.',
+:{req:'Read my hexagram',sug:'Suggest names',wait:'Consulting…',off:'The reading service is unavailable right now (you may be offline or previewing locally). The judgment above is yours to reflect on: we choose to read hexagrams as mirrors, not verdicts — a modern way of reading, offered for reflection.',
  needQ:'Please write your question first.',
  nameOff:'Name suggestions are offline right now. Tip: classic Chinese names often pair a virtue (德 virtue, 安 peace, 明 bright) with a nature image (林 forest, 雪 snow, 川 river).',
  line:['Line 1 (bottom)','Line 2','Line 3','Line 4','Line 5','Line 6 (top)'],next:'Cast line {i} of 6 (record: {p})',done:'All six lines are cast.',
- primary:'Primary hexagram',changed:'Changing to',none:'No moving lines: read the primary hexagram only.',moving:'Moving lines: ',img:'Image: ',judg:'',
+ primary:'Primary hexagram',changed:'Changed hexagram',none:'No moving lines: read the primary hexagram only.',moving:'Moving lines: ',img:'Image: ',judg:'',
  v:{6:'old yin 6 ⚋→⚊',7:'young yang 7 ⚊',8:'young yin 8 ⚋',9:'old yang 9 ⚊→⚋'},bad:'Please enter three whole numbers above zero.',time:'Numbers from the current Chinese-calendar time: ',
  calc:'{a} ÷ 8 leaves {ra} → upper trigram {u}; {b} ÷ 8 leaves {rb} → lower trigram {l}; {c} ÷ 6 leaves {rc} → moving line {m}.'};
 // Xiantian (Former Heaven) numbers; bits listed bottom-to-top
@@ -43,7 +43,7 @@ function goto(n){document.querySelectorAll('.step').forEach(s=>s.hidden=+s.datas
 function questionReady(){return $('q').value.trim().length>0;}
 function syncNext(){const ok=questionReady(),btn=$('tostep2');if(!btn)return;btn.disabled=!ok;let hint=$('qhint');if(!hint){hint=document.createElement('p');hint.id='qhint';hint.className='qhint';btn.parentNode.insertBefore(hint,btn);}hint.textContent=S.needQ;hint.hidden=ok;}
 $('q').addEventListener('input',syncNext);
-$('tostep2').onclick=()=>{if(!questionReady()){syncNext();return;}if(mode==='name'){RES=null;$('hexout').innerHTML='';$('go').hidden=false;$('go').textContent=S.sug;$('aiout').textContent='';goto(3);}else goto(2);};
+$('tostep2').onclick=()=>{if(!questionReady()&&mode!=='iching'){syncNext();return;}if(!questionReady()&&mode==='iching'){goto(2);return;}if(mode==='name'){RES=null;$('hexout').innerHTML='';$('go').hidden=false;$('go').textContent=S.sug;$('aiout').textContent='';goto(3);}else goto(2);};
 document.querySelectorAll('[data-goto]').forEach(b=>b.onclick=()=>goto(+b.dataset.goto));
 document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>setMode(b.dataset.t));
 document.querySelectorAll('.methods button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.methods button').forEach(x=>x.classList.toggle('on',x===b));
