@@ -95,11 +95,13 @@ body.zhp .drawer-bg[hidden],[hidden]{display:none!important}
 .pairs{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
 .phd{grid-column:1/-1;margin:0;font-weight:600;text-align:center;color:var(--stone)}
 .pair{display:grid;grid-template-columns:1fr 40px 1fr;align-items:center;text-align:center;background:#fffaf0;border:1px solid var(--line);border-radius:6px;padding:10px 6px;font-size:1.25rem;font-weight:600}
-.pair i{display:block;font-style:normal;font-size:2rem;line-height:1.2}
+.pair .pz{display:block;font-family:var(--fz);font-size:2.6rem;font-weight:400;line-height:1.15}
+.pair .ps{display:block;font-size:.85rem;font-weight:400;letter-spacing:2px;opacity:.75}
+.pnote{grid-column:1/-1;margin:.45em 0 0;font-size:.82rem;font-weight:400;color:var(--stone);letter-spacing:1px}
 .yg{color:var(--cinnabar)}.yn{color:#3d5a6c}.vs{color:var(--gold)}
 .xiangs{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
 .xiang,.tri{text-align:center;background:#fffaf0;border:1px solid var(--line);border-radius:6px;padding:14px 8px}
-.xs,.ts{display:block;font-size:2.4rem;line-height:1.1;color:var(--ink)}.xi,.ti2{display:block;font-size:2rem}
+.xs,.ts{display:block;font-size:2.4rem;line-height:1.1;color:var(--ink)}
 .xiang b{display:block;font-size:1.05rem;color:var(--stone)}.xiang p{margin:.2em 0 0;font-size:1.3rem;font-weight:600;color:var(--ink)}
 .tris{display:grid;grid-template-columns:repeat(8,1fr);gap:10px}.tri b{display:block;font-size:1.5rem;color:var(--cinnabar)}.tri p{margin:0;color:var(--stone)}
 @media(max-width:760px){.pairs{grid-template-columns:1fr 1fr}.pair{font-size:1.1rem}.xiangs{grid-template-columns:1fr 1fr}.tris{grid-template-columns:repeat(4,1fr)}.farr{display:none}.fstep{flex:1 1 40%}}
