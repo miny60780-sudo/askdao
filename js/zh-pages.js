@@ -46,7 +46,17 @@ document.addEventListener('click',e=>{if(!pop.hidden&&!pop.contains(e.target)&&!
 addEventListener('scroll',()=>{if(!pop.hidden&&curCell&&!pop.classList.contains('sheet'))place(curCell);},{passive:true});
 addEventListener('hashchange',show);show();
 })();
-/* 起卦入口：打开 AI解卦 面板并预选方法 */
+/* 首屏起卦框（2026-11-09 改版定稿）：示例问题填充 + 带着问题打开解卦面板 */
+(function(){
+ const hq=document.getElementById('heroq'),hc=document.getElementById('herocast');if(!hq||!hc)return;
+ document.querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>{hq.value=c.dataset.q||'';hq.focus();}));
+ hc.addEventListener('click',()=>{
+  document.querySelector('.ffab.right').click();
+  const q=document.getElementById('q');if(q){q.value=hq.value;q.dispatchEvent(new Event('input',{bubbles:true}));}
+  if(typeof goto==='function')goto(1);
+ });
+})();
+/* 起卦入口：打开解卦面板并预选方法 */
 document.querySelectorAll('[data-cast]').forEach(b=>b.addEventListener('click',()=>{
  const m=b.dataset.cast;document.querySelector('.ffab.right').click();
  const mb=document.querySelector('.methods button[data-m="'+m+'"]');if(mb)mb.click();

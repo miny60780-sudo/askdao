@@ -43,7 +43,7 @@ function goto(n){document.querySelectorAll('.step').forEach(s=>s.hidden=+s.datas
 function questionReady(){return $('q').value.trim().length>0;}
 function syncNext(){const ok=questionReady(),btn=$('tostep2');if(!btn)return;btn.disabled=!ok;let hint=$('qhint');if(!hint){hint=document.createElement('p');hint.id='qhint';hint.className='qhint';btn.parentNode.insertBefore(hint,btn);}hint.textContent=S.needQ;hint.hidden=ok;}
 $('q').addEventListener('input',syncNext);
-$('tostep2').onclick=()=>{if(!questionReady()){syncNext();return;}if(mode==='name'){RES=null;$('hexout').innerHTML='';$('go').hidden=false;$('go').textContent=S.sug;$('aiout').textContent='';goto(3);}else goto(2);};
+$('tostep2').onclick=()=>{if(!questionReady()&&mode!=='iching'){syncNext();return;}if(!questionReady()&&mode==='iching'){goto(2);return;}if(mode==='name'){RES=null;$('hexout').innerHTML='';$('go').hidden=false;$('go').textContent=S.sug;$('aiout').textContent='';goto(3);}else goto(2);};
 document.querySelectorAll('[data-goto]').forEach(b=>b.onclick=()=>goto(+b.dataset.goto));
 document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>setMode(b.dataset.t));
 document.querySelectorAll('.methods button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.methods button').forEach(x=>x.classList.toggle('on',x===b));
